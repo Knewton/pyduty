@@ -3,7 +3,7 @@ from setuptools import find_packages, setup
 
 setup(
 	name="pyduty",
-	version="0.1.1" % get_version(),
+	version="0.1.1",
 	url = "https://github.com/Knewton/pyduty",
 	author="Devon Jones",
 	author_email="devon@knewton.com",
