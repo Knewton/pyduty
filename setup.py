@@ -1,5 +1,18 @@
 #!/usr/bin/env python
+import os.path
+import re
 from setuptools import find_packages, setup
+
+def parse_requirements(file_name):
+	"""Taken from http://cburgmer.posterous.com/pip-requirementstxt-and-setuppy"""
+	requirements = []
+	for line in open(os.path.join(os.path.dirname(__file__), "config", file_name), "r"):
+		line = line.strip()
+		# comments and blank lines
+		if re.match(r"(^#)|(^$)", line):
+			continue
+		requirements.append(line)
+	return requirements
 
 setup(
 	name="pyduty",
