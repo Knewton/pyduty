@@ -1,0 +1,55 @@
+#!/usr/bin/env python
+import os
+import os.path
+import sys
+import json
+from optparse import OptionParser
+from pyduty.users import get_users, create_user
+from pyduty.utils import get_api_key, get_domain
+
+def get_user(key, domain, query):
+	kwargs = {'query': query}
+	user_iter = get_users(key, domain, **kwargs)
+	for u in user_iter:
+		return u
+
+def build_user(key, domain, cemail, name, email, print_json):
+	u = get_user(key, domain, cemail)
+	if not u:
+		sys.stderr.write("%s is not a valid user\n" % cemail)
+		sys.exit(1)
+	testu = get_user(key, domain, email)
+	if testu:
+		sys.stderr.write("%s already exists\n" % email)
+		sys.exit(1)
+	data = create_user(key, domain, name, email, u['id'])
+	if print_json:
+		print json.dumps(data, indent=4)
+	else:
+		print "%s (%s) [%s]" % (data['user']['name'], data['user']['email'], data['user']['id'])
+	
+
+def main():
+	parser = optionParser()
+	(options, args) = parser.parse_args()
+	key = get_api_key(filename=options.config)
+	domain = get_domain(filename=options.config)
+	if len(args) != 3:
+		parser.print_help()
+		sys.exit(1)
+	build_user(key, domain, args[0], args[1], args[2], options.json)
+
+def optionParser():
+	usage = "usage: %prog [options] [your email] [user's full name] [user's email]\n\n"
+	usage += "creates new users in pagerduty"
+
+	parser = OptionParser(usage=usage)
+	parser.add_option(
+		"-j", "--json", dest="json", action="store_true",
+		help="print json instead of the names", default=False)
+	parser.add_option(
+		"-c", "--config", dest="config", help="config file", default='api')
+	return parser
+
+if __name__=='__main__':
+	main()

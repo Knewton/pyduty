@@ -1,0 +1,93 @@
+#!/usr/bin/env python
+import os
+import os.path
+import sys
+import json
+import datetime
+from optparse import OptionParser
+from pyduty.schedules import create_schedule
+from pyduty.utils import get_api_key, get_domain
+
+NON_CRITICAL_LAYER = {
+	'restrictions': [
+		{"start_day_of_week": 1, "duration_seconds": 28800, "start_time_of_day": "09:00:00"},
+		{"start_day_of_week": 2, "duration_seconds": 28800, "start_time_of_day": "09:00:00"},
+		{"start_day_of_week": 3, "duration_seconds": 28800, "start_time_of_day": "09:00:00"},
+		{"start_day_of_week": 4, "duration_seconds": 28800, "start_time_of_day": "09:00:00"},
+		{"start_day_of_week": 5, "duration_seconds": 28800, "start_time_of_day": "09:00:00"}
+	],
+	"start": datetime.datetime.now().strftime('%Y-%m-%dT%H:%M:%S-05:00'),
+	"rotation_turn_length_seconds": 86400,
+	"rotation_virtual_start": datetime.datetime.now().strftime('%Y-%m-%dT00:00:00-05:00'),
+	"restriction_type": "Weekly",
+	"users": [],
+	"priority": 0
+}
+
+CRITICAL_LAYER = {
+	"restrictions": [],
+	"rotation_turn_length_seconds": 86400,
+	"rotation_virtual_start": datetime.datetime.now().strftime('%Y-%m-%dT00:00:00-05:00'),
+	"start": datetime.datetime.now().strftime('%Y-%m-%dT%H:%M:%S-05:00'),
+	"users": [],
+	"priority": 0
+}
+
+def build_schedule(key, domain, users, name, layer, print_json):
+	schedule = {
+		"time_zone": "Eastern Time (US & Canada)",
+		"name": name
+	}
+	i = 1
+	for user in users:
+		layer['users'].append({"user": {"id": user}, "member_order": i})
+		i += 1
+	schedule['schedule_layers'] = [layer]
+	args = {'schedule': schedule}
+	return create_schedule(key, domain, **args)
+
+def build_schedules(key, domain, users, service_name, print_json, critical, noncritical):
+	schedules = []
+	if critical:
+		schedules.append(build_schedule(key, domain, users, "SO: %s (Critical)" % service_name, CRITICAL_LAYER, print_json))
+	if noncritical:
+		schedules.append(build_schedule(key, domain, users, "SO: %s (Non Critical)" % service_name, NON_CRITICAL_LAYER, print_json))
+	if print_json:
+		print json.dumps(schedules, indent=4)
+	else:
+		for s in schedules:
+			print "%s [%s]" % (s['schedule']['name'], s['schedule']['id'])
+
+def main():
+	parser = optionParser()
+	(options, args) = parser.parse_args()
+	key = get_api_key(filename=options.config)
+	domain = get_domain(filename=options.config)
+	if len(args) != 1 or len(options.users) == 0:
+		parser.print_help()
+		sys.exit(1)
+	build_schedules(key, domain, options.users, args[0], options.json, options.critical, options.noncritical)
+
+def optionParser():
+	usage = "usage: %prog [options] [service name]\n\n"
+	usage += "creates a service owner escalation paths in pagerduty"
+
+	parser = OptionParser(usage=usage)
+	parser.add_option(
+		"-j", "--json", dest="json", action="store_true", default=False,
+		help="print json instead of the names")
+	parser.add_option(
+		"-c", "--config", dest="config", default='api', help="config file")
+	parser.add_option(
+		"-u", "--user", dest="users", default=[], action="append",
+		help="users on the schedule")
+	parser.add_option(
+		"-C", "--no-critical", dest="critical", action="store_false",
+		default=True, help="Don't create a critical path")
+	parser.add_option(
+		"-N", "--no-noncritical", dest="noncritical", action="store_false",
+		default=True, help="Don't create a non critical path")
+	return parser
+
+if __name__=='__main__':
+	main()

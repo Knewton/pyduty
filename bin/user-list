@@ -1,0 +1,47 @@
+#!/usr/bin/env python
+import os
+import os.path
+import sys
+import json
+from optparse import OptionParser
+from pyduty.users import get_users
+from pyduty.utils import get_api_key, get_domain
+
+def list_users(key, domain, print_json=False, query=None):
+	kwargs = {}
+	if query:
+		kwargs['query'] = query
+	user_iter = get_users(key, domain, **kwargs)
+	if print_json:
+		pl = []
+		for u in user_iter:
+			pl.append(u)
+		print json.dumps(pl, indent=4)
+	else:
+		for u in user_iter:
+			print "%s (%s) [%s]" % (u['name'], u['email'], u['id'])
+
+def main():
+	parser = optionParser()
+	(options, args) = parser.parse_args()
+	key = get_api_key(filename=options.config)
+	domain = get_domain(filename=options.config)
+	q = None
+	if len(args) > 0:
+		q = args[0]
+	list_users(key, domain, options.json, query=q)
+
+def optionParser():
+	usage = "usage: %prog [options] [user query]\n\n"
+	usage += "queries users from pagerduty"
+
+	parser = OptionParser(usage=usage)
+	parser.add_option(
+		"-j", "--json", dest="json", action="store_true",
+		help="print json instead of the names", default=False)
+	parser.add_option(
+		"-c", "--config", dest="config", help="config file", default='api')
+	return parser
+
+if __name__=='__main__':
+	main()

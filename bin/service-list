@@ -1,0 +1,47 @@
+#!/usr/bin/env python
+import os
+import os.path
+import sys
+import json
+from optparse import OptionParser
+from pyduty.services import get_services
+from pyduty.utils import get_api_key, get_domain
+
+def list_services(key, domain, print_json=False, query=None):
+	kwargs = {}
+	if query:
+		kwargs['query'] = query
+	service_iter = get_services(key, domain, **kwargs)
+	if print_json:
+		pl = []
+		for s in service_iter:
+			pl.append(s)
+		print json.dumps(pl, indent=4)
+	else:
+		for s in service_iter:
+			print "%s [%s]" % (s['name'], s['id'])
+
+def main():
+	parser = optionParser()
+	(options, args) = parser.parse_args()
+	key = get_api_key(filename=options.config)
+	domain = get_domain(filename=options.config)
+	q = None
+	if len(args) > 0:
+		q = args[0]
+	list_services(key, domain, options.json, query=q)
+
+def optionParser():
+	usage = "usage: %prog [options] [service query]\n\n"
+	usage += "queries services from pagerduty"
+
+	parser = OptionParser(usage=usage)
+	parser.add_option(
+		"-j", "--json", dest="json", action="store_true",
+		help="print json instead of the names", default=False)
+	parser.add_option(
+		"-c", "--config", dest="config", help="config file", default='api')
+	return parser
+
+if __name__=='__main__':
+	main()
