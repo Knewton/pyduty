@@ -1,0 +1,46 @@
+#!/usr/bin/env python
+import os
+import os.path
+import sys
+import json
+from optparse import OptionParser
+from pyduty.services import update_service
+from pyduty.utils import get_api_key, get_domain
+
+def change_timeout(key, domain, service_id, ack, auto_resolve):
+	kwargs = {
+		'acknowledgement_timeout': ack,
+		'auto_resolve_timeout': auto_resolve
+	}
+	service = update_service(key, domain, service_id, **kwargs)
+	print json.dumps(service, indent=4)
+
+def main():
+	parser = optionParser()
+	(options, args) = parser.parse_args()
+	key = get_api_key(filename=options.config)
+	domain = get_domain(filename=options.config)
+	service_id = args[0]
+	ack = int(args[1])
+	if ack < 0:
+		ack = None
+	auto_resolve = int(args[2])
+	if auto_resolve < 0:
+		auto_resolve = None
+	change_timeout(key, domain, service_id, ack, auto_resolve)
+
+def optionParser():
+	usage = "usage: %prog [options] [service id] [acknowledgement timeout] [auto resolve timeout]\n\n"
+	usage += "queries services from pagerduty"
+
+	parser = OptionParser(usage=usage)
+	parser.add_option(
+		"-j", "--json", dest="json", action="store_true",
+		help="print json instead of the names", default=False)
+	parser.add_option(
+		"-c", "--config", dest="config", help="config file", default='api')
+	return parser
+
+if __name__=='__main__':
+	main()
+

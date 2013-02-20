@@ -1,10 +1,10 @@
-import knewton.config
+import os
 import copy
 import urllib
-import cStringIO
+import StringIO
 import json
 import pycurl
-
+import knewton.config
 
 PydutyConfigPath = knewton.config.ConfigPathDefaults([
 	'', '~/.pyduty', '/etc/pyduty'])
@@ -27,7 +27,7 @@ def get_domain(filename='api'):
 def list_get_func(key, domain, path, **kwargs):
 	def retfunc(offset=0):
 		c = pycurl.Curl()
-		body_buf = cStringIO.StringIO()
+		body_buf = StringIO.StringIO()
 		data = copy.copy(kwargs)
 		data['offset'] = offset
 		url = "https://%s/%s?%s" % (domain, path, urllib.urlencode(data))
@@ -71,12 +71,13 @@ class ListIterator:
 
 def get(key, domain, path, object_id, **kwargs):
 	c = pycurl.Curl()
-	body_buf = cStringIO.StringIO()
+	body_buf = StringIO.StringIO()
 	url = "https://%s/%s/%s?%s" % (domain, path, object_id, urllib.urlencode(kwargs))
 	header = ['Content-type: application/json', 'Authorization: Token token=%s' % key]
 	c.setopt(c.HTTPHEADER, header)
 	c.setopt(c.URL, url)
 	c.setopt(c.WRITEFUNCTION, body_buf.write)
+	c.setopt(c.TIMEOUT, 10)
 	c.perform()
 	jstring = body_buf.getvalue()
 	return_code = c.getinfo(c.HTTP_CODE)
@@ -86,16 +87,42 @@ def get(key, domain, path, object_id, **kwargs):
 
 def post(key, domain, path, **kwargs):
 	c = pycurl.Curl()
-	body_buf = cStringIO.StringIO()
+	body_buf = StringIO.StringIO()
 	url = "https://%s/%s" % (domain, path)
 	header = ['Content-type: application/json', 'Authorization: Token token=%s' % key]
 	c.setopt(c.HTTPHEADER, header)
 	c.setopt(c.URL, url)
 	c.setopt(c.POSTFIELDS, json.dumps(kwargs))
 	c.setopt(c.WRITEFUNCTION, body_buf.write)
+	c.setopt(c.TIMEOUT, 10)
 	c.perform()
 	jstring = body_buf.getvalue()
 	return_code = c.getinfo(c.HTTP_CODE)
 	if return_code != 201:
+		raise Exception("Return code %s\n%s" % (return_code, jstring))
+	return json.loads(jstring)
+
+def test(debug_type, debug_msg):
+	print "debug(%d): %s" % (debug_type, debug_msg)
+
+def put(key, domain, path, object_id, **kwargs):
+	c = pycurl.Curl()
+	body_buf = StringIO.StringIO()
+	url = "https://%s/%s/%s" % (domain, path, object_id)
+	header = ['Content-type: application/json', 'Authorization: Token token=%s' % key]
+	c.setopt(c.PUT, 1)
+	c.setopt(c.HTTPHEADER, header)
+	c.setopt(c.URL, url)
+	put_buf = StringIO.StringIO()
+	json.dump(kwargs, put_buf)
+	put_buf.seek(0)
+	c.setopt(c.READFUNCTION, put_buf.read)
+	c.setopt(c.INFILESIZE, put_buf.len)
+	c.setopt(c.TIMEOUT, 10)
+	c.setopt(c.WRITEFUNCTION, body_buf.write)
+	c.perform()
+	jstring = body_buf.getvalue()
+	return_code = c.getinfo(c.HTTP_CODE)
+	if return_code != 200:
 		raise Exception("Return code %s\n%s" % (return_code, jstring))
 	return json.loads(jstring)
