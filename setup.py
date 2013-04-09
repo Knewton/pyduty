@@ -16,7 +16,7 @@ def parse_requirements(file_name):
 
 setup(
 	name="pyduty",
-	version="0.1.1",
+	version="0.1.2",
 	url = "https://github.com/Knewton/pyduty",
 	author="Devon Jones",
 	author_email="devon@knewton.com",
