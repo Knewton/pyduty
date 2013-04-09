@@ -34,6 +34,10 @@ def list_get_func(key, domain, path, **kwargs):
 		header = ['Content-type: application/json', 'Authorization: Token token=%s' % key]
 		c.setopt(c.HTTPHEADER, header)
 		c.setopt(c.URL, url)
+		# CURL SSL CERT VERIFY OPTIONS. ADDED TD 2013.04.09
+		c.setopt(pycurl.SSL_VERIFYPEER, 1)
+		c.setopt(pycurl.SSL_VERIFYHOST, 2)
+		c.setopt(pycurl.CAINFO, '/etc/ssl/certs/ca-certificates.crt')
 		c.setopt(c.WRITEFUNCTION, body_buf.write)
 		c.perform()
 		jstring = body_buf.getvalue()
