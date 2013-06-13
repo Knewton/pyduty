@@ -1,0 +1,83 @@
+#!/usr/bin/env python
+import os
+import os.path
+import sys
+import json
+import datetime
+import re
+from optparse import OptionParser
+from pyduty.services import create_service
+from pyduty.escalations import get_escalations
+from pyduty.utils import get_api_key, get_domain
+
+def get_policies(key, domain, name):
+	kwargs = {'query': "%s (" % name }
+	policy_iter = get_escalations(key, domain, **kwargs)
+	policies = [s for s in policy_iter]
+	if len(policies) < 1 or len(policies) > 2:
+		raise Exception("Error finding escalation policies: %s" % policies)
+	retpolices = {}
+	for policy in policies:
+		m = re.search("\((.*)\)", policy['name'])
+		if not m:
+			raise Exception("Schedule %s is not named for use with program" %
+				policy['name'])
+		retpolices[m.group(0)] = policy
+	return retpolices
+
+def build_service(key, domain, name, policy):
+	service = {
+		"auto_resolve_timeout": None,
+		"name": name,
+		"type": "nagios",
+		"acknowledgement_timeout": 86400,
+		"email_filter_mode": "all-email",
+		"escalation_policy_id": policy['id'],
+		"email_incident_creation": None
+	} 
+	return create_service(key, domain, **service)
+
+def build_services(key, domain, service_name, print_json):
+	policies = get_policies(key, domain, service_name)
+	services = []
+	if policies.has_key("(Critical)"):
+		services.append(build_service(
+			key, domain, "%s (Critical)" %
+			service_name, policies["(Critical)"]))
+	if policies.has_key("(Non Critical)"):
+		services.append(build_service(
+			key, domain, "%s (Non Critical)" %
+			service_name, policies["(Non Critical)"]))
+	if print_json:
+		print json.dumps(services, indent=4)
+	else:
+		for s in services:
+			print "%s [%s] - %s" % (
+				s["service"]['name'],
+				s["service"]['id'],
+				s["service"]['service_key'])
+
+def main():
+	parser = optionParser()
+	(options, args) = parser.parse_args()
+	key = get_api_key(filename=options.config)
+	domain = get_domain(filename=options.config)
+	if len(args) != 1:
+		parser.print_help()
+		sys.exit(1)
+	build_services(key, domain, args[0], options.json)
+
+def optionParser():
+	usage = "usage: %prog [options] [service name]\n\n"
+	usage += "creates a service owner service in pagerduty"
+
+	parser = OptionParser(usage=usage)
+	parser.add_option(
+		"-j", "--json", dest="json", action="store_true", default=False,
+		help="print json instead of the names")
+	parser.add_option(
+		"-c", "--config", dest="config", default='api', help="config file")
+	return parser
+
+if __name__=='__main__':
+	main()

@@ -1,0 +1,127 @@
+#!/usr/bin/env python
+import os
+import os.path
+import sys
+import json
+import datetime
+import re
+from optparse import OptionParser
+from pyduty.schedules import get_schedules
+from pyduty.escalations import create_escalation
+from pyduty.utils import get_api_key, get_domain
+
+CTO_ID = "PAFIC6O"
+
+def get_l2_schedule(key, domain):
+	kwargs = {'query': "L2" }
+	schedule_iter = get_schedules(key, domain, **kwargs)
+	schedules = [s for s in schedule_iter]
+	if len(schedules) != 1:
+		raise Exception("L2 Schedule not found")
+	return schedules[0]
+
+def build_critical_path(key, domain, service_name, schedule):
+	l2 = get_l2_schedule(key, domain)
+	policy = {
+		"num_loops": 1,
+		"escalation_rules": [
+			{
+				"escalation_delay_in_minutes": 30,
+				"rule_object": {
+					"type": "schedule",
+					"id": l2['id']
+				},
+				"id": "PAG5WE2"
+			},
+			{
+				"escalation_delay_in_minutes": 30,
+				"rule_object": {
+					"type": "schedule",
+					"id": schedule['id']
+				},
+				"id": "PX6HW1C"
+			},
+			{
+				"escalation_delay_in_minutes": 30,
+				"rule_object": {
+					"id": CTO_ID,
+					"type": "user"
+				}
+			}
+		],
+		"name": "%s (Critical)" % service_name
+	}
+	return create_escalation(key, domain, **policy)
+
+def build_non_critical_path(key, domain, service_name, schedule):
+	policy = {
+		"num_loops": 1,
+		"escalation_rules": [
+			{
+				"escalation_delay_in_minutes": 30,
+				"rule_object": {
+					"type": "schedule", 
+					"id": schedule['id']
+				}
+			}
+		],
+		"name": "%s (Non Critical)" % service_name
+	}
+	return create_escalation(key, domain, **policy)
+
+def get_so_schedules(key, domain, service_name):
+	kwargs = {'query': "SO: %s (" % service_name }
+	schedule_iter = get_schedules(key, domain, **kwargs)
+	schedules = [s for s in schedule_iter]
+	if len(schedules) < 1 or len(schedules) > 2:
+		raise Exception("Error finding SO schedule: %s" % schedules)
+	retsch = {}
+	for schedule in schedules:
+		m = re.search("\((.*)\)", schedule['name'])
+		if not m:
+			raise Exception("Schedule %s is not named for use with program" %
+				schedule['name'])
+		retsch[m.group(0)] = schedule
+	return retsch
+
+def build_escalations(key, domain, service_name, print_json):
+	schedules = get_so_schedules(key, domain, service_name)
+	
+	policies = []
+	if schedules.has_key("(Critical)"):
+		policies.append(build_critical_path(
+			key, domain, service_name, schedules["(Critical)"]))
+	if schedules.has_key("(Non Critical)"):
+		policies.append(build_non_critical_path(
+			key, domain, service_name, schedules["(Non Critical)"]))
+	if print_json:
+		print json.dumps(policies, indent=4)
+	else:
+		for p in policies:
+			print "%s [%s]" % (
+				p['escalation_policy']['name'], p['escalation_policy']['id'])
+
+def main():
+	parser = optionParser()
+	(options, args) = parser.parse_args()
+	key = get_api_key(filename=options.config)
+	domain = get_domain(filename=options.config)
+	if len(args) != 1:
+		parser.print_help()
+		sys.exit(1)
+	build_escalations(key, domain, args[0], options.json)
+
+def optionParser():
+	usage = "usage: %prog [options] [service name]\n\n"
+	usage += "creates a service owner escalation path in pagerduty"
+
+	parser = OptionParser(usage=usage)
+	parser.add_option(
+		"-j", "--json", dest="json", action="store_true", default=False,
+		help="print json instead of the names")
+	parser.add_option(
+		"-c", "--config", dest="config", default='api', help="config file")
+	return parser
+
+if __name__=='__main__':
+	main()
