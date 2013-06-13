@@ -4,11 +4,11 @@ import urllib
 import StringIO
 import json
 import pycurl
-import knewton.config
+import k.config
 
-PydutyConfigPath = knewton.config.ConfigPathDefaults([
+PydutyConfigPath = k.config.ConfigPathDefaults([
 	'', '~/.pyduty', '/etc/pyduty'])
-PydutyConfig = knewton.config.ConfigDefault(config_path=PydutyConfigPath)
+PydutyConfig = k.config.ConfigDefault(config_path=PydutyConfigPath)
 
 def get_api_key(filename='api'):
 	confhash = PydutyConfig.fetch_config(filename)
