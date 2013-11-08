@@ -14,7 +14,7 @@ def get_policies(key, domain, name):
 	kwargs = {'query': "%s (" % name }
 	policy_iter = get_escalations(key, domain, **kwargs)
 	policies = [s for s in policy_iter]
-	if len(policies) < 1 or len(policies) > 2:
+	if len(policies) < 1 or len(policies) > 3:
 		raise Exception("Error finding escalation policies: %s" % policies)
 	retpolices = {}
 	for policy in policies:
@@ -48,6 +48,10 @@ def build_services(key, domain, service_name, print_json):
 		services.append(build_service(
 			key, domain, "%s (Non Critical)" %
 			service_name, policies["(Non Critical)"]))
+	if policies.has_key("(QA)"):
+		services.append(build_service(
+			key, domain, "%s (QA)" %
+			service_name, policies["(QA)"]))
 	if print_json:
 		print json.dumps(services, indent=4)
 	else:

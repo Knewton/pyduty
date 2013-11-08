@@ -69,6 +69,22 @@ def build_non_critical_path(key, domain, service_name, schedule):
 	}
 	return create_escalation(key, domain, **policy)
 
+def build_qa_path(key, domain, service_name, schedule):
+	policy = {
+		"num_loops": 1,
+		"escalation_rules": [
+			{
+				"escalation_delay_in_minutes": 30,
+				"rule_object": {
+					"type": "schedule", 
+					"id": schedule['id']
+				}
+			}
+		],
+		"name": "%s (QA)" % service_name
+	}
+	return create_escalation(key, domain, **policy)
+
 def get_so_schedules(key, domain, service_name):
 	kwargs = {'query': "SO: %s (" % service_name }
 	schedule_iter = get_schedules(key, domain, **kwargs)
@@ -84,6 +100,16 @@ def get_so_schedules(key, domain, service_name):
 		retsch[m.group(0)] = schedule
 	return retsch
 
+def get_qa_schedule(key, domain):
+	kwargs = {'query': "QA Rotation" }
+	schedule_iter = get_schedules(key, domain, **kwargs)
+	schedules = [s for s in schedule_iter]
+	if len(schedules) != 1:
+		raise Exception("Error finding QA Rotation schedule: %s" % schedules)
+	retsch = {}
+	for schedule in schedules:
+		return schedule
+
 def build_escalations(key, domain, service_name, print_json):
 	schedules = get_so_schedules(key, domain, service_name)
 	
@@ -94,6 +120,10 @@ def build_escalations(key, domain, service_name, print_json):
 	if schedules.has_key("(Non Critical)"):
 		policies.append(build_non_critical_path(
 			key, domain, service_name, schedules["(Non Critical)"]))
+	qa_schedule = get_qa_schedule(key, domain)
+	if qa_schedule:
+		policies.append(build_qa_path(
+			key, domain, service_name, qa_schedule))
 	if print_json:
 		print json.dumps(policies, indent=4)
 	else:

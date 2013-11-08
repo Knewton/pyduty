@@ -70,7 +70,7 @@ def main():
 
 def optionParser():
 	usage = "usage: %prog [options] [service name]\n\n"
-	usage += "creates a service owner escalation paths in pagerduty"
+	usage += "creates a service owner services in pagerduty"
 
 	parser = OptionParser(usage=usage)
 	parser.add_option(
