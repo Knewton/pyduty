@@ -89,6 +89,22 @@ def get(key, domain, path, object_id, **kwargs):
 		raise Exception("Return code %s\n%s" % (return_code, jstring))
 	return json.loads(jstring)
 
+def get_no_id(key, domain, path, **kwargs):
+	c = pycurl.Curl()
+	body_buf = StringIO.StringIO()
+	url = "https://%s/%s?%s" % (domain, path, urllib.urlencode(kwargs))
+	header = ['Content-type: application/json', 'Authorization: Token token=%s' % key]
+	c.setopt(c.HTTPHEADER, header)
+	c.setopt(c.URL, url)
+	c.setopt(c.WRITEFUNCTION, body_buf.write)
+	c.setopt(c.TIMEOUT, 10)
+	c.perform()
+	jstring = body_buf.getvalue()
+	return_code = c.getinfo(c.HTTP_CODE)
+	if return_code != 200:
+		raise Exception("Return code %s\n%s" % (return_code, jstring))
+	return json.loads(jstring)
+
 def post(key, domain, path, **kwargs):
 	c = pycurl.Curl()
 	body_buf = StringIO.StringIO()
