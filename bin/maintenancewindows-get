@@ -1,0 +1,34 @@
+#!/usr/bin/env python
+import os
+import os.path
+import sys
+import json
+from pyduty.maintenance_windows import get_maintenance_windows
+from optparse import OptionParser
+from pyduty.utils import get_api_key, get_domain
+
+def list_maintenance_windows(key, domain):
+    maintenance_windows = get_maintenance_windows(key, domain)
+    mw  = []
+    for s in maintenance_windows:
+        mw.append(s)
+    print json.dumps(mw, indent=4)
+
+def main():
+	parser = optionParser()
+	(options, args) = parser.parse_args()
+	key = get_api_key(filename=options.config)
+	domain = get_domain(filename=options.config)
+	list_maintenance_windows(key, domain)
+
+def optionParser():
+	usage = "usage: %prog [options] \n\n"
+	usage += "queries maintenance windows from pagerduty"
+
+	parser = OptionParser(usage=usage)
+	parser.add_option(
+		"-c", "--config", dest="config", help="config file", default='api')
+	return parser
+
+if __name__=='__main__':
+	main()
