@@ -24,6 +24,13 @@ def get_domain(filename='api'):
 	except:
 		raise KeyError('config file has no key "api_key"')
 
+def get_requester_id(filename='api'):
+	confhash = PydutyConfig.fetch_config(filename)
+	try:
+		return confhash['requester_id']
+	except:
+		raise KeyError('config file has no key "requester_id"')
+
 def list_get_func(key, domain, path, **kwargs):
 	def retfunc(offset=0):
 		c = pycurl.Curl()
