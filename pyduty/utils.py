@@ -24,6 +24,13 @@ def get_domain(filename='api'):
 	except:
 		raise KeyError('config file has no key "api_key"')
 
+def get_requester_id(filename='api'):
+	confhash = PydutyConfig.fetch_config(filename)
+	try:
+		return confhash['requester_id']
+	except:
+		raise KeyError('config file has no key "requester_id"')
+
 def list_get_func(key, domain, path, **kwargs):
 	def retfunc(offset=0):
 		c = pycurl.Curl()
@@ -121,6 +128,19 @@ def post(key, domain, path, **kwargs):
 	if return_code != 201:
 		raise Exception("Return code %s\n%s" % (return_code, jstring))
 	return json.loads(jstring)
+
+def delete(key, domain, path, object_id):
+	c = pycurl.Curl()
+	url = "https://%s/%s/%s" % (domain, path, object_id)
+	header = ['Content-type: application/json', 'Authorization: Token token=%s' % key]
+	c.setopt(c.HTTPHEADER, header)
+	c.setopt(c.URL, url)
+	c.setopt(c.TIMEOUT, 10)
+	c.perform()
+	return_code = c.getinfo(c.HTTP_CODE)
+	if return_code != 204:
+		raise Exception("Return code %s" % (return_code))
+	return
 
 def test(debug_type, debug_msg):
 	print "debug(%d): %s" % (debug_type, debug_msg)

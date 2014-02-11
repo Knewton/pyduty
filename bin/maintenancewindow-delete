@@ -1,0 +1,32 @@
+#!/usr/bin/env python
+import os
+import os.path
+import sys
+import json
+from optparse import OptionParser
+from pyduty.maintenance_windows import delete_maintenance_window
+from pyduty.utils import get_api_key, get_domain
+
+def delete_window(key, domain, window_id):
+	window = delete_maintenance_window(key, domain, window_id)
+	print json.dumps(window, indent=4)
+
+def main():
+	parser = optionParser()
+	(options, args) = parser.parse_args()
+	key = get_api_key(filename=options.config)
+	domain = get_domain(filename=options.config)
+	window_id = args[0]
+	delete_window(key, domain, window_id)
+
+def optionParser():
+	usage = "usage: %prog [options] [maintenance window id]\n\n"
+	usage += "deletes a maintenance window from pagerduty"
+
+	parser = OptionParser(usage=usage)
+	parser.add_option(
+		"-c", "--config", dest="config", help="config file", default='api')
+	return parser
+
+if __name__=='__main__':
+	main()

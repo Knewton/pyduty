@@ -1,0 +1,35 @@
+#!/usr/bin/env python
+import os
+import os.path
+import sys
+import json
+from optparse import OptionParser
+from pyduty.maintenance_windows import create_maintenance_window
+from pyduty.utils import get_api_key, get_domain
+
+def build_maintenance_window(key, domain, start_time, end_time, description, service_id):
+    data = create_maintenance_window(key, domain, **{'requester_id': 'P1C1RN9', 'maintenance_window':{'start_time': start_time, 'end_time': end_time, 'description': description, 'service_ids':[service_id]}})
+    print json.dumps(data, indent=4)
+	
+
+def main():
+	parser = optionParser()
+	(options, args) = parser.parse_args()
+	key = get_api_key(filename=options.config)
+	domain = get_domain(filename=options.config)
+	if len(args) != 4:
+		parser.print_help()
+		sys.exit(1)
+	build_maintenance_window(key, domain, args[0], args[1], args[2], args[3])
+
+def optionParser():
+	usage = "usage: %prog [start_time] [end_time] [description] [service_id]\n\n"
+	usage += "creates new maintenance window in pagerduty"
+
+	parser = OptionParser(usage=usage)
+	parser.add_option(
+		"-c", "--config", dest="config", help="config file", default='api')
+	return parser
+
+if __name__=='__main__':
+	main()
